@@ -16,7 +16,7 @@ The project includes following steps:
 
 * [README.md](README.md) - This file.
 * [src/](src/) folder:
-   - project C++ souce code files
+   - project C++ source code files
    - [CMakeLists.txt](src/CMakeLists.txt) - `cmake` input file to generate the project `Makefile`. It was moved to the `src` folder and adopted to generate an `Eclipse` project - thanks to [Eclipse IDE profile](https://github.com/udacity/CarND-Extended-Kalman-Filter-Project/tree/master/ide_profiles/Eclipse) repo for provided instructions. 
 * [data/](data/) folder:
     - [map_data.txt](data/map_data.txt) - map inputs to the particle filter with with the position of landmarks (in meters) on an arbitrary Cartesian coordinate system 
@@ -31,6 +31,10 @@ The project code was built and executed on a Linux VMware guest.
 1. Make a build directory: `mkdir build && cd build`
 2. Compile the code: `cmake ../src/ && make` (Please note that `CMakeList.txt` file is located in folder `src/`)
 3. Run the code: `./particle_filter`
+Alternatively use the following scripts to streamline this process, these can be leveraged by executing the following in the top directory of the project:
+1. `./clean.sh`
+2. `./build.sh`
+3. `./run.sh`
 
 ### Project results
 
