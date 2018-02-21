@@ -104,119 +104,6 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 }
 
-#if 1
-void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
-    const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-  // TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
-  //   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
-  // NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
-  //   according to the MAP'S coordinate system. You will need to transform between the two systems.
-  //   Keep in mind that this transformation requires both rotation AND translation (but no scaling).
-  //   The following is a good resource for the theory:
-  //   https://www.willamette.edu/~gorr/classes/GeneralGraphics/Transforms/transforms2d.htm
-  //   and the following is a good resource for the actual equation to implement (look at equation
-  //   3.33
-  //   http://planning.cs.uiuc.edu/node99.html
-
-  // Iterate over all particles/predictions
-  for (int n = 0; n < num_particles; n++) {
-
-    Particle particle = particles[n];
-
-    vector<int> associations;
-    vector<double> sense_x;
-    vector<double> sense_y;
-
-    double particle_weight = 1.0; // initial particle weight
-
-    // TODO: Transform observations from VEHICL's coordinate system to the particles MAP's coordinate system
-    vector<LandmarkObs> trans_observations; // a vector of transformed observations
-    for(int i = 0; i < observations.size(); i++)  {
-
-      LandmarkObs obs = observations[i];
-
-      // original observation coordinates
-      double  obs_x = obs.x;
-      double  obs_y = obs.y;
-      double  theta = particle.theta;
-
-      // transformed observation coordinates
-      double  trans_x = particle.x + cos(theta) * obs_x - sin(theta) * obs_y;
-      double  trans_y = particle.y + sin(theta) * obs_x + cos(theta) * obs_y;
-
-      LandmarkObs trans_obs;
-      trans_obs.id = i;
-      trans_obs.x = trans_x;
-      trans_obs.y = trans_y;
-      trans_observations.push_back(trans_obs);
-
-      //cout << "OBS"  << i+1 << ":\t"<< obs.id << '\t' << obs.x << '\t' << obs.y << endl;
-      //cout << "TOBS" << i+1 << ":\t" << trans_obs.id << '\t' << trans_obs.x << '\t' << trans_obs.y << endl;
-    }
-
-    // TODO: Associate the particle with the nearest landmark
-    // for each transformed observation find a closest landmark
-    for (int i = 0; i < trans_observations.size(); i++) {
-      LandmarkObs trans_obs = trans_observations[i];
-
-      // init the closest LM
-      Map::single_landmark_s  closest_landmark = map_landmarks.landmark_list[0];
-      double  min_range = dist(trans_obs.x, trans_obs.y, closest_landmark.x_f, closest_landmark.y_f);
-
-      // find the closest LM
-      for(int k = 0; k < map_landmarks.landmark_list.size(); k++) {
-        Map::single_landmark_s  landmark = map_landmarks.landmark_list[k];
-        double lm_range = dist(particle.x, particle.y, landmark.x_f, landmark.y_f);
-
-        if(lm_range < sensor_range)  {
-          // a range between the obs. and the landmark
-          double obs_range = dist(trans_obs.x, trans_obs.y, landmark.x_f, landmark.y_f);
-          if(obs_range < min_range) {
-            min_range = obs_range;
-            closest_landmark = landmark;
-          }
-        }
-      }
-      //cout << "OBS_" << i << ":\t" << trans_obs.x << "\t" << trans_obs.y << endl;
-      //cout << "LM_" << closest_landmark.id_i << ":\t" << closest_landmark.x_f << "\t" << closest_landmark.y_f << endl;
-
-      associations.push_back(closest_landmark.id_i);
-      sense_x.push_back(trans_obs.x);
-      sense_y.push_back(trans_obs.y);
-
-      // TODO: Update the particle weight
-      // Calculate a Multivariate-Gaussian probability density value for each observation
-      // Adopted from the forum post:
-      // https://discussions.udacity.com/t/transformations-and-associations-calculating-the-particles-final-weight/308602/2
-      double std_x = std_landmark[0];
-      double std_y = std_landmark[1];
-      double multiplier = 1.0/(2*M_PI*std_x*std_y);
-      double cov_x = pow(std_x, 2.0);
-      double cov_y = pow(std_y, 2.0);
-
-      double observation_prob = multiplier*exp(-(pow(trans_obs.x - closest_landmark.x_f, 2.0)/(2.0*cov_x) +
-                                                pow(trans_obs.y - closest_landmark.y_f, 2.0)/(2.0*cov_y)));
-
-      //cout << observation_prob << endl;
-
-      // The final weight is a product of all the calculated measurement probabilities
-      particle_weight *= observation_prob;
-    }
-
-
-    // Update weight of the particle
-    particles[n].weight = particle_weight;
-    weights[n]      = particle_weight;
-
-    // update associations
-    particles[n] = SetAssociations(particle, associations, sense_x, sense_y);
-
-    //cout  << "Update" << "\t" << n << "\t" << particles[n].weight << "\t" << particles[n].x << "\t" << particles[n].y << endl;
-  }
-}
-
-#else
-
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
 	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
@@ -233,6 +120,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   // Transform observations from VEHICL's coordinate system to the particles MAP's coordinate system
   for (int n = 0; n < num_particles; n++) {
 
+    Particle particle = particles[n];
+
     vector<LandmarkObs> trans_observations; // a vector of transformed observations
     vector<LandmarkObs> lm_in_range;        // a vector of landmarks in the sensor range
     vector<int> associations;
@@ -242,7 +131,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     // find landmarks in the sensor range assuming the sensor is in the position of the particle
     for (auto lm = map_landmarks.landmark_list.begin(); lm != map_landmarks.landmark_list.end(); ++lm)  {
 
-      double range = dist(particles[n].x, particles[n].y, lm->x_f, lm->y_f); // always positive range
+      double range = dist(particle.x, particle.y, lm->x_f, lm->y_f); // always positive range
       if(range <= sensor_range) {
         LandmarkObs lm_obs;
         lm_obs.id = lm->id_i;
@@ -252,8 +141,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       }
     }
 
-    //cout << lm_in_range.size() << endl;
-
     double particle_weight = 1.0; // initial particle weight
 
     // transform observations and associate with the closest landmark in range
@@ -261,19 +148,19 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       LandmarkObs trans_obs;
       double  x = obs->x;
       double  y = obs->y;
-      double  theta = particles[n].theta;
+      double  theta = particle.theta;
 
       // transformed coordinates
-      double  t_x = particles[n].x + cos(theta) * x - sin(theta) * y;
-      double  t_y = particles[n].y + sin(theta) * x + cos(theta) * y;
+      double  trans_x = particle.x + cos(theta) * x - sin(theta) * y;
+      double  trans_y = particle.y + sin(theta) * x + cos(theta) * y;
 
       // find the nearest neighbor landmark association
       auto lm = lm_in_range.begin();
       auto nearest_lm = lm;;
-      double min_range = dist(t_x, t_y, lm->x, lm->y);
+      double min_range = dist(trans_x, trans_y, lm->x, lm->y);
       // find the closest
       while(lm != lm_in_range.end()) {
-        double range = dist(t_x, t_y, lm->x, lm->y);
+        double range = dist(trans_x, trans_y, lm->x, lm->y);
         if(range < min_range) {
           min_range = range;
           nearest_lm = lm;
@@ -281,15 +168,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         lm++;
       }
 
-      //cout << "obs:" << t_x << '\t' << t_y << endl;
-      //cout << "lm :" << nearest_lm->x << '\t' << nearest_lm->y << endl;
-
-      trans_obs.x = t_x;
-      trans_obs.y = t_y;
+      trans_obs.x = trans_x;
+      trans_obs.y = trans_y;
       trans_observations.push_back(trans_obs);
 
-      sense_x.push_back(t_x);
-      sense_y.push_back(t_y);
+      sense_x.push_back(trans_x);
+      sense_y.push_back(trans_y);
       associations.push_back(nearest_lm->id);
 
       // Calculate a Multivariate-Gaussian probability density value for each observation
@@ -301,27 +185,23 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       double cov_x = pow(std_x, 2.0);
       double cov_y = pow(std_y, 2.0);
 
-      double observation_prob = multiplier*exp(-pow(t_x - nearest_lm->x, 2.0)/(2.0*cov_x) -
-                                                pow(t_y - nearest_lm->y, 2.0)/(2.0*cov_y));
-
-      cout << observation_prob << endl;
+      double observation_prob = multiplier*exp(-pow(trans_x - nearest_lm->x, 2.0)/(2.0*cov_x) -
+                                                pow(trans_y - nearest_lm->y, 2.0)/(2.0*cov_y));
 
       // The final weight is a product of all the calculated measurement probabilities
       particle_weight *= observation_prob;
     }
 
     // Update weight of the particle
-    particles[n].weight = particle_weight;
-    weights[n]          = particle_weight;
-
-    //cout << particle_weight << endl;
+    particle.weight = particle_weight;
+    weights[n]      = particle_weight;
 
     // update associations
-    particles[n] = SetAssociations(particles[n], associations, sense_x, sense_y);
-  }
+    particles[n] = SetAssociations(particle, associations, sense_x, sense_y);
 
+    //cout  << "Update" << "\t" << n << "\t" << particles[n].weight << "\t" << particles[n].x << "\t" << particles[n].y << endl;
+  }
 }
-#endif
 
 void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
@@ -345,7 +225,6 @@ void ParticleFilter::resample() {
   }
 
   particles = new_particles;
-
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 
