@@ -31,7 +31,9 @@ The project code was built and executed on a Linux VMware guest.
 1. Make a build directory: `mkdir build && cd build`
 2. Compile the code: `cmake ../src/ && make` (Please note that `CMakeList.txt` file is located in folder `src/`)
 3. Run the code: `./particle_filter`
+
 Alternatively use the following scripts to streamline this process, these can be leveraged by executing the following in the top directory of the project:
+
 1. `./clean.sh`
 2. `./build.sh`
 3. `./run.sh`
